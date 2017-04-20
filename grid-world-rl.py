@@ -66,6 +66,7 @@ class GridWorldMDP:
         if utility_grid is None:
             utility_grid = np.zeros_like(self._reward_grid)
 
+        utility_grid = utility_grid.astype(np.float64)
         out = np.zeros_like(utility_grid)
         M, N = self._reward_grid.shape
         for i in range(M):
