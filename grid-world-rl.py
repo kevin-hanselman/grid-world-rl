@@ -7,6 +7,15 @@ def mask_to_points(mask):
 
 class GridWorldMDP:
 
+    # up, right, down, left
+    _direction_deltas = [
+        (-1, 0),
+        (0, 1),
+        (1, 0),
+        (0, -1),
+    ]
+
+
     def __init__(self,
                  reward_grid,
                  terminal_mask,
@@ -22,6 +31,7 @@ class GridWorldMDP:
             no_action_probability,
             obstacle_mask
         )
+        self._utility_grid = reward_grid.copy()
 
     def _create_transition_matrix(self,
                                   action_probabilities,
@@ -29,15 +39,7 @@ class GridWorldMDP:
                                   obstacle_mask):
         M, N = self._reward_grid.shape
 
-        # up, right, down, left
-        deltas = [
-            (-1, 0),
-            (0, 1),
-            (1, 0),
-            (0, -1),
-        ]
-
-        num_actions = len(deltas)
+        num_actions = len(self.direction_deltas)
 
         T = np.zeros((M, N, num_actions, M, N))
 
@@ -50,7 +52,7 @@ class GridWorldMDP:
             for offset, P in action_probabilities:
                 direction = (action + offset) % num_actions
 
-                dr, dc = deltas[direction]
+                dr, dc = self.direction_deltas[direction]
                 r1 = np.clip(r0 + dr, 0, M - 1)
                 c1 = np.clip(c0 + dc, 0, N - 1)
 
@@ -76,6 +78,20 @@ class GridWorldMDP:
                                                utility_grid)
         return out
 
+    def run_value_iterations(self, discount=1.0, utility_grid=None, iterations=10):
+        for _ in range(iterations):
+            utility_grid = gw.value_iteration(utility_grid=utility_grid)
+        return utility_grid
+
+    def policy_iteration(self, discount=1.0, policy_grid=None):
+        num_actions = len(self._direction_deltas)
+        if policy_grid is None:
+            policy_grid = np.random.randint(0, num_actions, self._reward_grid.shape)
+
+        self._utility_grid = self.reward_grid + \
+            discount * (self._utility_grid.reshape((1,1,1,M,N))*self._T) \
+                .sum(axis=-1).sum(axis=-1)[:,:,self.policy_
+
     def _calc_utility(self, loc, discount, utility_grid):
         if self._terminal_mask[loc]:
             return self._reward_grid[loc]
@@ -97,7 +113,7 @@ class GridWorldMDP:
 
 
 if __name__ == '__main__':
-    size = (3, 4)
+    shape = (3, 4)
     goal = (0, -1)
     trap = (1, -1)
     obstacle = (1, 1)
@@ -105,7 +121,7 @@ if __name__ == '__main__':
     goal_reward = 100
     trap_reward = -100
 
-    reward_grid = np.zeros(size) + default_reward
+    reward_grid = np.zeros(shape) + default_reward
     reward_grid[goal] = goal_reward
     reward_grid[trap] = trap_reward
     reward_grid[obstacle] = 0
@@ -128,6 +144,5 @@ if __name__ == '__main__':
                       no_action_probability=0.0)
 
     utility_grid = np.zeros_like(reward_grid)
-    for _ in range(10):
-        utility_grid = gw.value_iteration(utility_grid=utility_grid)
-        print(utility_grid)
+    gw.run_value_iterations(iterations=10)
+
