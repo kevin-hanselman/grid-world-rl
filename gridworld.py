@@ -68,7 +68,7 @@ class GridWorldMDP:
 
     def grid_indices_to_coordinates(self, indices=None):
         if indices is None:
-            indices = np.arange(self._reward_grid.size)
+            indices = np.arange(self.size)
         return np.unravel_index(indices, self.shape)
 
     def grid_coordinates_to_indices(self, coordinates=None):
@@ -87,7 +87,7 @@ class GridWorldMDP:
                                   action_probabilities,
                                   no_action_probability,
                                   obstacle_mask):
-        M, N = self._reward_grid.shape
+        M, N = self.shape
 
         num_actions = len(self._direction_deltas)
 

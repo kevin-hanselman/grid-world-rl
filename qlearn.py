@@ -35,9 +35,9 @@ class QLearner:
         return self._stored_action
 
     def learn(self, initial_state, experience_func, max_iterations=1000):
-        done = False
-        self.initialize(initial_state)
         for _ in range(max_iterations):
+            done = False
+            self.initialize(initial_state)
             while not done:
                 state, reward, done = experience_func(self._stored_state,
                                                       self._stored_action)
