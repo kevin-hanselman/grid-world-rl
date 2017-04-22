@@ -37,10 +37,17 @@ if __name__ == '__main__':
                       ],
                       no_action_probability=0.0)
 
-    print(gw.run_value_iterations(iterations=25, discount=0.5))
-    print(gw.run_policy_iterations(iterations=25, discount=0.5))
-    plt.figure()
-    gw.plot_policy()
+    mdp_solvers = {'Value Iteration': gw.run_value_iterations,
+                   'Policy Iteration': gw.run_policy_iterations} 
+
+    for solver_name, solver_fn in mdp_solvers.items():
+        print('Final result of {}:'.format(solver_name))
+        policy_grid, utility_grid = solver_fn(iterations=25, discount=0.5)
+        print(policy_grid)
+        print(utility_grid)
+        plt.figure()
+        gw.plot_policy(utility_grid)
+
     plt.show()
 
     ql = QLearner(num_states=(shape[0] * shape[1]),
