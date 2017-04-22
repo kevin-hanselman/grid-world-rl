@@ -34,15 +34,21 @@ class QLearner:
         self._stored_state = state
         return self._stored_action
 
-    def learn(self, initial_state, experience_func, iterations=1000):
-        for _ in range(iterations):
+    def learn(self, initial_state, experience_func, iterations=100):
+        '''Iteratively experience new states and rewards'''
+        all_policies = np.zeros((self._num_states, iterations))
+        all_utilities = np.zeros_like(all_policies)
+        for i in range(iterations):
             done = False
             self.initialize(initial_state)
             while not done:
                 state, reward, done = experience_func(self._stored_state,
                                                       self._stored_action)
                 self.experience(state, reward)
-        return self.get_policy_and_utility()
+            policy, utility = self.get_policy_and_utility()
+            all_policies[:, i] = policy
+            all_utilities[:, i] = utility
+        return all_policies, all_utilities
 
     def experience(self, state, reward):
         '''The learner experiences state and receives a reward'''

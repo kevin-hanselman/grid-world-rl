@@ -12,6 +12,7 @@ class GridWorldMDP:
         (1, 0),
         (0, -1),
     ]
+    _num_actions = len(_direction_deltas)
 
     def __init__(self,
                  reward_grid,
@@ -38,22 +39,32 @@ class GridWorldMDP:
         return self._reward_grid.size
 
     def run_value_iterations(self, discount=1.0,
-                             utility_grid=None,
                              iterations=10):
-        for _ in range(iterations):
+        utility_grids, policy_grids = self._init_utility_policy_storage(iterations)
+
+        utility_grid = np.zeros_like(self._reward_grid)
+        for i in range(iterations):
             utility_grid = self._value_iteration(utility_grid=utility_grid)
-        return self.best_policy(utility_grid), utility_grid
+            policy_grids[:, :, i] = self.best_policy(utility_grid)
+            utility_grids[:, :, i] = utility_grid
+        return policy_grids, utility_grids
 
     def run_policy_iterations(self, discount=1.0,
-                              policy_grid=None,
-                              utility_grid=None,
                               iterations=10):
-        for _ in range(iterations):
+        utility_grids, policy_grids = self._init_utility_policy_storage(iterations)
+
+        policy_grid = np.random.randint(0, self._num_actions,
+                                        self.shape)
+        utility_grid = self._reward_grid.copy()
+
+        for i in range(iterations):
             policy_grid, utility_grid = self._policy_iteration(
                 policy_grid=policy_grid,
                 utility_grid=utility_grid
             )
-        return policy_grid, utility_grid
+            policy_grids[:, :, i] = policy_grid
+            utility_grids[:, :, i] = utility_grid
+        return policy_grids, utility_grids
 
     def generate_experience(self, current_state_idx, action_idx):
         sr, sc = self.grid_indices_to_coordinates(current_state_idx)
@@ -83,23 +94,27 @@ class GridWorldMDP:
         return np.argmax((utility_grid.reshape((1, 1, 1, M, N)) * self._T)
                          .sum(axis=-1).sum(axis=-1), axis=2)
 
+    def _init_utility_policy_storage(self, depth):
+        M, N = self.shape
+        utility_grids = np.zeros((M, N, depth))
+        policy_grids = np.zeros_like(utility_grids)
+        return utility_grids, policy_grids
+
     def _create_transition_matrix(self,
                                   action_probabilities,
                                   no_action_probability,
                                   obstacle_mask):
         M, N = self.shape
 
-        num_actions = len(self._direction_deltas)
-
-        T = np.zeros((M, N, num_actions, M, N))
+        T = np.zeros((M, N, self._num_actions, M, N))
 
         r0, c0 = self.grid_indices_to_coordinates()
 
         T[r0, c0, :, r0, c0] += no_action_probability
 
-        for action in range(num_actions):
+        for action in range(self._num_actions):
             for offset, P in action_probabilities:
-                direction = (action + offset) % num_actions
+                direction = (action + offset) % self._num_actions
 
                 dr, dc = self._direction_deltas[direction]
                 r1 = np.clip(r0 + dr, 0, M - 1)
@@ -113,11 +128,7 @@ class GridWorldMDP:
 
         return T
 
-    def _value_iteration(self, discount=1.0, utility_grid=None):
-        if utility_grid is None:
-            utility_grid = np.zeros_like(self._reward_grid)
-
-        utility_grid = utility_grid.astype(np.float64)
+    def _value_iteration(self, utility_grid, discount=1.0):
         out = np.zeros_like(utility_grid)
         M, N = self.shape
         for i in range(M):
@@ -127,15 +138,8 @@ class GridWorldMDP:
                                                     utility_grid)
         return out
 
-    def _policy_iteration(self, discount=1.0,
-                          utility_grid=None, policy_grid=None):
-        num_actions = len(self._direction_deltas)
-        if policy_grid is None:
-            policy_grid = np.random.randint(0, num_actions,
-                                            self.shape)
-        if utility_grid is None:
-            utility_grid = self._reward_grid.copy()
-
+    def _policy_iteration(self, *, utility_grid,
+                          policy_grid, discount=1.0):
         r, c = self.grid_indices_to_coordinates()
 
         M, N = self.shape
