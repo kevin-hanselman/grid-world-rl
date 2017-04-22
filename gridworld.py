@@ -42,7 +42,7 @@ class GridWorldMDP:
                              iterations=10):
         for _ in range(iterations):
             utility_grid = self._value_iteration(utility_grid=utility_grid)
-        return utility_grid
+        return self.best_policy(utility_grid), utility_grid
 
     def run_policy_iterations(self, discount=1.0,
                               policy_grid=None,
@@ -53,7 +53,7 @@ class GridWorldMDP:
                 policy_grid=policy_grid,
                 utility_grid=utility_grid
             )
-        return policy_grid
+        return policy_grid, utility_grid
 
     def generate_experience(self, current_state_idx, action_idx):
         sr, sc = self.grid_indices_to_coordinates(current_state_idx)
@@ -162,10 +162,8 @@ class GridWorldMDP:
                 axis=-1)
         ) + self._reward_grid[loc]
 
-    def plot_policy(self, utility_grid=None):
-        if utility_grid is None:
-            utility_grid = self._utility_grid
-        policy_grid = self._best_policy(utility_grid)
+    def plot_policy(self, utility_grid):
+        policy_grid = self.best_policy(utility_grid)
         markers = "^>v<"
         marker_size = 200 // np.max(policy_grid.shape)
         marker_edge_width = marker_size // 10
