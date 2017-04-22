@@ -34,11 +34,14 @@ class QLearner:
         self._stored_state = state
         return self._stored_action
 
-    def learn(self, experience_func, max_iterations=100):
+    def learn(self, initial_state, experience_func, max_iterations=1000):
+        done = False
+        self.initialize(initial_state)
         for _ in range(max_iterations):
-            state, reward = experience_func(self._stored_state,
-                                            self._stored_action)
-            self.experience(state, reward)
+            while not done:
+                state, reward, done = experience_func(self._stored_state,
+                                                      self._stored_action)
+                self.experience(state, reward)
 
     def experience(self, state, reward):
         '''The learner experiences state and receives a reward'''

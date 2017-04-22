@@ -46,8 +46,9 @@ if __name__ == '__main__':
                   random_action_prob=0.5,
                   random_action_decay_rate=0.99)
 
-    start_state = gw.grid_coordinates_to_indeces(start)
-    first_action = ql.initialize(start_state)
+    start_state = gw.grid_coordinates_to_indices(start)
 
-    ql.learn(gw.generate_experience, max_iterations=10000)
+    ql.learn(start_state, gw.generate_experience, max_iterations=10000)
     print(ql._Q)
+    ql_policy = np.argmax(ql._Q, axis=1).reshape(gw.shape)
+    print(ql_policy)
