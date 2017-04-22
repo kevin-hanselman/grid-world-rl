@@ -1,15 +1,6 @@
 import numpy as np
 
 
-def mask_to_points(mask):
-    return [tuple(point) for point in np.argwhere(mask)]
-
-
-def get_mat_coordinate_lists(shape):
-    return [arr.flatten()
-            for arr in np.meshgrid(range(shape[1]), range(shape[0]))][::-1]
-
-
 class GridWorldMDP:
 
     # up, right, down, left
@@ -19,7 +10,6 @@ class GridWorldMDP:
         (1, 0),
         (0, -1),
     ]
-
 
     def __init__(self,
                  reward_grid,
@@ -36,8 +26,60 @@ class GridWorldMDP:
             no_action_probability,
             obstacle_mask
         )
-        self._utility_grid = reward_grid.copy()
 
+    @property
+    def shape(self):
+        return self._reward_grid.shape
+
+    @property
+    def size(self):
+        return self._reward_grid.size
+
+    def run_value_iterations(self, discount=1.0,
+                             utility_grid=None,
+                             iterations=10):
+        for _ in range(iterations):
+            utility_grid = self._value_iteration(utility_grid=utility_grid)
+        return utility_grid
+
+    def run_policy_iterations(self, discount=1.0,
+                              policy_grid=None,
+                              utility_grid=None,
+                              iterations=10):
+        for _ in range(iterations):
+            policy_grid, utility_grid = self._policy_iteration(
+                policy_grid=policy_grid,
+                utility_grid=utility_grid
+            )
+        return policy_grid
+
+    def generate_experience(self, current_state_idx, action_idx):
+        sr, sc = self.grid_indices_to_coordinates(current_state_idx)
+        next_state_probs = self._T[sr, sc, action_idx, :, :].flatten()
+
+        next_state_idx = np.random.choice(np.arange(next_state_probs.size),
+                                          p=next_state_probs)
+
+        return (next_state_idx,
+                self._reward_grid.flatten()[next_state_idx],
+                self._terminal_mask.flatten()[next_state_idx])
+
+    def grid_indices_to_coordinates(self, indices=None):
+        if indices is None:
+            indices = np.arange(self._reward_grid.size)
+        return np.unravel_index(indices, self.shape)
+
+    def grid_coordinates_to_indices(self, coordinates=None):
+        # Annoyingly, this doesn't work for negative indices.
+        # The mode='wrap' parameter only works on positive indices.
+        if coordinates is None:
+            return np.arange(self.size)
+        return np.ravel_multi_index(coordinates, self.shape)
+
+    def best_policy(self, utility_grid):
+        M, N = self.shape
+        return np.argmax((utility_grid.reshape((1, 1, 1, M, N)) * self._T)
+                         .sum(axis=-1).sum(axis=-1), axis=2)
 
     def _create_transition_matrix(self,
                                   action_probabilities,
@@ -49,7 +91,7 @@ class GridWorldMDP:
 
         T = np.zeros((M, N, num_actions, M, N))
 
-        r0, c0 = get_mat_coordinate_lists((M, N))
+        r0, c0 = self.grid_indices_to_coordinates()
 
         T[r0, c0, :, r0, c0] += no_action_probability
 
@@ -69,54 +111,45 @@ class GridWorldMDP:
 
         return T
 
-    def value_iteration(self, discount=1.0, utility_grid=None):
+    def _value_iteration(self, discount=1.0, utility_grid=None):
         if utility_grid is None:
             utility_grid = np.zeros_like(self._reward_grid)
 
         utility_grid = utility_grid.astype(np.float64)
         out = np.zeros_like(utility_grid)
-        M, N = self._reward_grid.shape
+        M, N = self.shape
         for i in range(M):
             for j in range(N):
-                out[i, j] = self._calc_utility((i, j),
-                                               discount,
-                                               utility_grid)
+                out[i, j] = self._calculate_utility((i, j),
+                                                    discount,
+                                                    utility_grid)
         return out
 
-    def run_value_iterations(self, discount=1.0, utility_grid=None, iterations=10):
-        for _ in range(iterations):
-            utility_grid = gw.value_iteration(utility_grid=utility_grid)
-        return utility_grid
-
-    def run_policy_iterations(self, discount=1.0, policy_grid=None, iterations=10):
-        for _ in range(iterations):
-            policy_grid = gw.policy_iteration(policy_grid=policy_grid)
-        return policy_grid
-
-    def _best_policy(self, utility_grid):
-        M, N = self._reward_grid.shape
-        return np.argmax((self._utility_grid.reshape((1,1,1,M,N))*self._T)
-            .sum(axis=-1).sum(axis=-1), axis=2)
-
-    def policy_iteration(self, discount=1.0, policy_grid=None):
+    def _policy_iteration(self, discount=1.0,
+                          utility_grid=None, policy_grid=None):
         num_actions = len(self._direction_deltas)
         if policy_grid is None:
-            policy_grid = np.random.randint(0, num_actions, self._reward_grid.shape)
+            policy_grid = np.random.randint(0, num_actions,
+                                            self.shape)
+        if utility_grid is None:
+            utility_grid = self._reward_grid.copy()
 
-        r, c = get_mat_coordinate_lists(self._reward_grid.shape)
+        r, c = self.grid_indices_to_coordinates()
 
-        M, N = self._reward_grid.shape
+        M, N = self.shape
 
-        self._utility_grid = (self._reward_grid + 
-            discount * ((self._utility_grid.reshape((1,1,1,M,N))*self._T) 
-            .sum(axis=-1).sum(axis=-1))[r, c, policy_grid.flatten()] 
-            .reshape(policy_grid.shape))
+        utility_grid = (
+            self._reward_grid +
+            discount * ((utility_grid.reshape((1, 1, 1, M, N)) * self._T)
+                        .sum(axis=-1).sum(axis=-1))[r, c, policy_grid.flatten()]
+            .reshape(self.shape)
+        )
 
-        self._utility_grid[self._terminal_mask] = self._reward_grid[self._terminal_mask]
+        utility_grid[self._terminal_mask] = self._reward_grid[self._terminal_mask]
 
-        return self._best_policy(self._utility_grid)
+        return self.best_policy(utility_grid), utility_grid
 
-    def _calc_utility(self, loc, discount, utility_grid):
+    def _calculate_utility(self, loc, discount, utility_grid):
         if self._terminal_mask[loc]:
             return self._reward_grid[loc]
         row, col = loc
@@ -126,46 +159,3 @@ class GridWorldMDP:
                        axis=-1),
                 axis=-1)
         ) + self._reward_grid[loc]
-
-    def _get_neighbors(self, loc):
-        neighbors = [(loc[0] + n, loc[1]) for n in (-1, 1)] + \
-                    [(loc[0], loc[1] + n) for n in (-1, 1)]
-
-        return [(r, c) for (r, c) in neighbors
-                if r >= 0 and r < self._reward_grid.shape[0]
-                and c >= 0 and c < self._reward_grid.shape[1]]
-
-
-if __name__ == '__main__':
-    shape = (3, 4)
-    goal = (0, -1)
-    trap = (1, -1)
-    obstacle = (1, 1)
-    default_reward = -0.04
-    goal_reward = 1
-    trap_reward = -1
-
-    reward_grid = np.zeros(shape) + default_reward
-    reward_grid[goal] = goal_reward
-    reward_grid[trap] = trap_reward
-    reward_grid[obstacle] = 0
-
-    terminal_mask = np.zeros_like(reward_grid, dtype=np.bool)
-    terminal_mask[goal] = True
-    terminal_mask[trap] = True
-
-    obstacle_mask = np.zeros_like(reward_grid, dtype=np.bool)
-    obstacle_mask[1, 1] = True
-
-    gw = GridWorldMDP(reward_grid=reward_grid,
-                      obstacle_mask=obstacle_mask,
-                      terminal_mask=terminal_mask,
-                      action_probabilities=[
-                          (-1, 0.1),
-                          (0, 0.8),
-                          (1, 0.1),
-                      ],
-                      no_action_probability=0.0)
-
-    print(gw.run_value_iterations(iterations=25, discount=0.5))
-    print(gw.run_policy_iterations(iterations=25, discount=0.5))
