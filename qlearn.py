@@ -30,9 +30,15 @@ class QLearner:
 
     def initialize(self, state):
         '''Set the initial state and return the learner's first action'''
-        self._stored_action = self._decide_next_action(state)
+        self._decide_next_action(state)
         self._stored_state = state
         return self._stored_action
+
+    def learn(self, experience_func, max_iterations=100):
+        for _ in range(max_iterations):
+            state, reward = experience_func(self._stored_state,
+                                            self._stored_action)
+            self.experience(state, reward)
 
     def experience(self, state, reward):
         '''The learner experiences state and receives a reward'''
@@ -48,7 +54,7 @@ class QLearner:
                 self._update_Q(*self._experiences[i])
 
         # determine an action and update the current state
-        self._stored_action = self._decide_next_action(state)
+        self._decide_next_action(state)
         self._stored_state = state
 
         self._random_action_prob *= self._random_action_decay_rate
@@ -57,8 +63,9 @@ class QLearner:
 
     def _update_Q(self, s, a, s_prime, r):
         best_reward = self._Q[s_prime, self._find_best_action(s_prime)]
-        self._Q[s, a] *= (1 - self._alpha)
-        self._Q[s, a] += self._alpha * (r + self._gamma * best_reward)
+        self._Q[s, a] *= (1 - self._learning_rate)
+        self._Q[s, a] += (self._learning_rate
+                          * (r + self._discount_rate * best_reward))
 
     def _decide_next_action(self, state):
         if rand.random() <= self._random_action_prob:
