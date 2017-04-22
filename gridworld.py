@@ -1,4 +1,6 @@
 import numpy as np
+import matplotlib.pyplot as plt
+import cv2
 
 
 class GridWorldMDP:
@@ -159,3 +161,45 @@ class GridWorldMDP:
                        axis=-1),
                 axis=-1)
         ) + self._reward_grid[loc]
+
+    def plot_policy(self, utility_grid=None):
+        if utility_grid is None:
+            utility_grid = self._utility_grid
+        policy_grid = self._best_policy(utility_grid)
+        markers = "^>v<"
+        marker_size = 200 // np.max(policy_grid.shape)
+        marker_edge_width = marker_size // 10
+        marker_fill_color = 'w'
+
+        no_action_mask = self._terminal_mask | self._obstacle_mask
+
+        utility_normalized = (utility_grid - utility_grid.min()) / \
+                             (utility_grid.max() - utility_grid.min())
+
+        utility_normalized = (255*utility_normalized).astype(np.uint8)
+
+        utility_rgb = cv2.applyColorMap(utility_normalized, cv2.COLORMAP_JET)
+        for i in range(3):
+            channel = utility_rgb[:,:,i]
+            channel[self._obstacle_mask] = 0
+
+        plt.imshow(utility_rgb[:,:,::-1], interpolation='none')
+
+        for i, marker in enumerate(markers):
+            y, x = np.where((policy_grid == i) & np.logical_not(no_action_mask))
+            plt.plot(x, y, marker, ms=marker_size, mew=marker_edge_width,
+                     color=marker_fill_color)
+
+        y, x = np.where(self._terminal_mask)
+        plt.plot(x, y, 'o', ms=marker_size, mew=marker_edge_width,
+                 color=marker_fill_color)
+
+        tick_step_options = np.array([1,2,5,10,20,50,100])
+        tick_step = np.max(policy_grid.shape)/8
+        best_option = np.argmin(np.abs(np.log(tick_step) - np.log(tick_step_options)))
+        tick_step = tick_step_options[best_option]
+        plt.xticks(np.arange(0, policy_grid.shape[1] - 0.5, tick_step))
+        plt.yticks(np.arange(0, policy_grid.shape[0] - 0.5, tick_step))
+        plt.xlim([-0.5, policy_grid.shape[0]-0.5])
+        plt.xlim([-0.5, policy_grid.shape[1]-0.5])
+

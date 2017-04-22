@@ -2,6 +2,7 @@ from gridworld import GridWorldMDP
 from qlearn import QLearner
 
 import numpy as np
+import matplotlib.pyplot as plt
 
 
 if __name__ == '__main__':
@@ -10,7 +11,7 @@ if __name__ == '__main__':
     trap = (1, -1)
     obstacle = (1, 1)
     start = (2, 0)
-    default_reward = -0.04
+    default_reward = -0.1
     goal_reward = 1
     trap_reward = -1
 
@@ -38,6 +39,9 @@ if __name__ == '__main__':
 
     print(gw.run_value_iterations(iterations=25, discount=0.5))
     print(gw.run_policy_iterations(iterations=25, discount=0.5))
+    plt.figure()
+    gw.plot_policy()
+    plt.show()
 
     ql = QLearner(num_states=(shape[0] * shape[1]),
                   num_actions=4,
