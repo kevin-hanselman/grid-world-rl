@@ -38,7 +38,7 @@ if __name__ == '__main__':
                       no_action_probability=0.0)
 
     mdp_solvers = {'Value Iteration': gw.run_value_iterations,
-                   'Policy Iteration': gw.run_policy_iterations} 
+                   'Policy Iteration': gw.run_policy_iterations}
 
     for solver_name, solver_fn in mdp_solvers.items():
         print('Final result of {}:'.format(solver_name))
@@ -59,7 +59,11 @@ if __name__ == '__main__':
 
     start_state = gw.grid_coordinates_to_indices(start)
 
-    ql.learn(start_state, gw.generate_experience, max_iterations=10000)
-    print(ql._Q)
-    ql_policy = np.argmax(ql._Q, axis=1).reshape(gw.shape)
-    print(ql_policy)
+    ql_policy, ql_utility = ql.learn(start_state,
+                                     gw.generate_experience,
+                                     iterations=10000)
+    print('Final result of QLearning:')
+    print(ql_policy.reshape(gw.shape))
+    print(ql_utility.reshape(gw.shape))
+    gw.plot_policy(utility_grid)
+    plt.show()

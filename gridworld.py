@@ -200,4 +200,3 @@ class GridWorldMDP:
         plt.yticks(np.arange(0, policy_grid.shape[0] - 0.5, tick_step))
         plt.xlim([-0.5, policy_grid.shape[0]-0.5])
         plt.xlim([-0.5, policy_grid.shape[1]-0.5])
-

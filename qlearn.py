@@ -34,14 +34,15 @@ class QLearner:
         self._stored_state = state
         return self._stored_action
 
-    def learn(self, initial_state, experience_func, max_iterations=1000):
-        for _ in range(max_iterations):
+    def learn(self, initial_state, experience_func, iterations=1000):
+        for _ in range(iterations):
             done = False
             self.initialize(initial_state)
             while not done:
                 state, reward, done = experience_func(self._stored_state,
                                                       self._stored_action)
                 self.experience(state, reward)
+        return self.get_policy_and_utility()
 
     def experience(self, state, reward):
         '''The learner experiences state and receives a reward'''
@@ -63,6 +64,11 @@ class QLearner:
         self._random_action_prob *= self._random_action_decay_rate
 
         return self._stored_action
+
+    def get_policy_and_utility(self):
+        policy = np.argmax(self._Q, axis=1)
+        utility = np.max(self._Q, axis=1)
+        return policy, utility
 
     def _update_Q(self, s, a, s_prime, r):
         best_reward = self._Q[s_prime, self._find_best_action(s_prime)]
