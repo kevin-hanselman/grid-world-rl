@@ -38,6 +38,10 @@ class GridWorldMDP:
     def size(self):
         return self._reward_grid.size
 
+    @property
+    def reward_grid(self):
+        return self._reward_grid
+
     def run_value_iterations(self, discount=1.0,
                              iterations=10):
         utility_grids, policy_grids = self._init_utility_policy_storage(iterations)
@@ -185,10 +189,10 @@ class GridWorldMDP:
 
         utility_rgb = cv2.applyColorMap(utility_normalized, cv2.COLORMAP_JET)
         for i in range(3):
-            channel = utility_rgb[:,:,i]
+            channel = utility_rgb[:, :, i]
             channel[self._obstacle_mask] = 0
 
-        plt.imshow(utility_rgb[:,:,::-1], interpolation='none')
+        plt.imshow(utility_rgb[:, :, ::-1], interpolation='none')
 
         for i, marker in enumerate(markers):
             y, x = np.where((policy_grid == i) & np.logical_not(no_action_mask))
@@ -199,7 +203,7 @@ class GridWorldMDP:
         plt.plot(x, y, 'o', ms=marker_size, mew=marker_edge_width,
                  color=marker_fill_color)
 
-        tick_step_options = np.array([1,2,5,10,20,50,100])
+        tick_step_options = np.array([1, 2, 5, 10, 20, 50, 100])
         tick_step = np.max(policy_grid.shape)/8
         best_option = np.argmin(np.abs(np.log(tick_step) - np.log(tick_step_options)))
         tick_step = tick_step_options[best_option]

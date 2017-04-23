@@ -41,10 +41,13 @@ class QLearner:
         for i in range(iterations):
             done = False
             self.initialize(initial_state)
-            while not done:
+            for j in range(iterations):
                 state, reward, done = experience_func(self._stored_state,
                                                       self._stored_action)
                 self.experience(state, reward)
+                if done:
+                    break
+
             policy, utility = self.get_policy_and_utility()
             all_policies[:, i] = policy
             all_utilities[:, i] = utility
