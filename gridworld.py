@@ -126,6 +126,8 @@ class GridWorldMDP:
 
                 T[r0, c0, action, r1, c1] += P
 
+        terminal_locs = np.where(self._terminal_mask.flatten())[0]
+        T[r0[terminal_locs], c0[terminal_locs], :, :, :] = 0
         return T
 
     def _value_iteration(self, utility_grid, discount=1.0):
@@ -166,8 +168,9 @@ class GridWorldMDP:
                 axis=-1)
         ) + self._reward_grid[loc]
 
-    def plot_policy(self, utility_grid):
-        policy_grid = self.best_policy(utility_grid)
+    def plot_policy(self, utility_grid, policy_grid=None):
+        if policy_grid is None:
+            policy_grid = self.best_policy(utility_grid)
         markers = "^>v<"
         marker_size = 200 // np.max(policy_grid.shape)
         marker_edge_width = marker_size // 10

@@ -72,7 +72,7 @@ if __name__ == '__main__':
 
     start_state = gw.grid_coordinates_to_indices(start)
 
-    iterations = 100
+    iterations = 1000
     flat_policies, flat_utilities = ql.learn(start_state,
                                              gw.generate_experience,
                                              iterations=iterations)
@@ -85,6 +85,6 @@ if __name__ == '__main__':
     print(ql_utility_grids[:, :, -1])
 
     plt.figure()
-    gw.plot_policy(ql_utility_grids[:, :, -1])
+    gw.plot_policy(ql_utility_grids[:, :, -1], ql_policy_grids[:, :, -1])
     plot_convergence(ql_utility_grids, ql_policy_grids)
     plt.show()
