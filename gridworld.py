@@ -48,7 +48,10 @@ class GridWorldMDP:
 
         utility_grid = np.zeros_like(self._reward_grid)
         for i in range(iterations):
-            utility_grid = self._value_iteration(utility_grid=utility_grid)
+            utility_grid = self._value_iteration(
+                utility_grid=utility_grid,
+                discount=discount
+            )
             policy_grids[:, :, i] = self.best_policy(utility_grid)
             utility_grids[:, :, i] = utility_grid
         return policy_grids, utility_grids
@@ -64,7 +67,8 @@ class GridWorldMDP:
         for i in range(iterations):
             policy_grid, utility_grid = self._policy_iteration(
                 policy_grid=policy_grid,
-                utility_grid=utility_grid
+                utility_grid=utility_grid,
+                discount=discount
             )
             policy_grids[:, :, i] = policy_grid
             utility_grids[:, :, i] = utility_grid
